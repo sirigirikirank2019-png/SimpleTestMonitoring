@@ -145,10 +145,12 @@ jobs:
       - name: Collect Reports
         run: |
           mkdir -p /tmp/final_reports
-          cp -r /tmp/results/report /tmp/final_reports/JMeter-Report
-          curl -s http://localhost:8081/metrics > /tmp/final_reports/cadvisor_metrics.txt
-          curl -s http://localhost:9091/api/v1/targets > /tmp/final_reports/prometheus_targets.json
-          curl -s http://localhost:3001/api/health > /tmp/final_reports/grafana_health.json
+          cp -r /tmp/results/report /tmp/final_reports/JMeter-Report || true
+          
+          curl -s http://localhost:8081/metrics > /tmp/final_reports/cadvisor_metrics.txt || true
+          curl -s http://localhost:9091/api/v1/targets > /tmp/final_reports/prometheus_targets.json || true
+          curl -s http://localhost:3001/api/health > /tmp/final_reports/grafana_health.json || true
+
           echo "✅ Monitoring data collected"
 
       - name: Upload All Reports
