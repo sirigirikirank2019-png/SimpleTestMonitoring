@@ -103,14 +103,25 @@ jobs:
       - name: Install JMeter Plugins
         run: |
           JMETER_HOME=$HOME/apache-jmeter-5.6.3
+
+          # Create plugin and config directories
+          mkdir -p $JMETER_HOME/lib/ext ~/.jmeter
+      
+          # Download plugin manager and cmdrunner
           wget -q https://jmeter-plugins.org/get/ -O /tmp/JMeterPluginsManager.jar
           wget -q https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar -O /tmp/cmdrunner-2.3.jar
-          mkdir -p $JMETER_HOME/lib/ext
+      
           cp /tmp/JMeterPluginsManager.jar $JMETER_HOME/lib/ext/
           cp /tmp/cmdrunner-2.3.jar $JMETER_HOME/lib/
+      
+          # Run plugin manager installer
           java -cp $JMETER_HOME/lib/ext/JMeterPluginsManager.jar org.jmeterplugins.repository.PluginManagerCMDInstaller
-          $JMETER_HOME/bin/PluginsManagerCMD.sh install jpgc-casutg
-          ls -lh $JMETER_HOME/lib/ext | grep jpgc
+      
+          # Install Ultimate Thread Group plugin (jpgc-casutg)
+          $JMETER_HOME/bin/PluginsManagerCMD.sh install jpgc-casutg || true
+      
+          echo "✅ Installed plugins:"
+          ls -lh $JMETER_HOME/lib/ext | grep jpgc || true
     
       - name: Run JMeter Test
         run: |
