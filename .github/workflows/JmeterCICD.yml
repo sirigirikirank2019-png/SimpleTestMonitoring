@@ -59,23 +59,33 @@ jobs:
           sudo apt-get install -y curl wget unzip openjdk-17-jre-headless
           echo "✅ Prerequisites installed"
 
-      - name: Create Prometheus config (for cAdvisor)
+      - name: Start Prometheus
         run: |
-          cat <<'EOF' > /tmp/prometheus.yml
+          echo "🧩 Creating Prometheus config..."
+          cat <<'EOF' > prometheus.yml
           global:
             scrape_interval: 5s
           scrape_configs:
             - job_name: 'cadvisor'
               static_configs:
-                - targets: ['cadvisor:8081']
+                - targets: ['localhost:8081']
           EOF
-          echo "✅ Prometheus config created in /tmp/prometheus.yml"
+      
+          echo "🚀 Starting Prometheus container..."
+          docker run -d \
+            -p 9090:9090 \
+            -v $PWD/prometheus.yml:/etc/prometheus/prometheus.yml \
+            --name prometheus prom/prometheus:latest
+      
+          echo "✅ Prometheus started successfully"
+          sleep 5
+          curl -s http://localhost:9091/-/ready || echo "Prometheus not yet ready"
 
       - name: Wait for Monitoring Stack
         run: |
           echo "⏳ Waiting for Prometheus (9091) and Grafana (3001)..."
           for i in {1..20}; do
-            if curl -s -f http://localhost:9090/-/ready > /dev/null; then
+            if curl -s -f http://localhost:9091/-/ready > /dev/null; then
               echo "✅ Prometheus is ready!"
               break
             fi
@@ -83,7 +93,7 @@ jobs:
           done
           
           for i in {1..20}; do
-            if curl -s -f http://localhost:3000/api/health > /dev/null; then
+            if curl -s -f http://localhost:3001/api/health > /dev/null; then
               echo "✅ Grafana is ready!"
               break
             fi
@@ -129,7 +139,7 @@ jobs:
       - name: Run JMeter Test
         run: |
           mkdir -p /tmp/results
-          jmeter -n -t ./P01_HTTPBinAPI_PT_StreeTest.jmx \
+          jmeter -n -t ./P01_HTTPBinAPI_StreeTest.jmx \
                  -l /tmp/results/results.jtl \
                  -e -o /tmp/results/report
           echo "✅ JMeter test completed"
