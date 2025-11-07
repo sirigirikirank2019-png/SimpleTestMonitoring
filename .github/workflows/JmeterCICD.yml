@@ -26,7 +26,6 @@ jobs:
         ports:
           - 8081:8080
         options: >-
-          --privileged
           --volume=/:/rootfs:ro
           --volume=/var/run:/var/run:rw
           --volume=/sys:/sys:ro
@@ -36,17 +35,19 @@ jobs:
         image: prom/prometheus:latest
         ports:
           - 9091:9090
+        env:
+          PROMETHEUS_CONFIG_PATH: /etc/prometheus/prometheus.yml
         options: >-
-          --volume=${{ github.workspace }}/prometheus.yml:/etc/prometheus/prometheus.yml
+          --volume=/tmp/prometheus.yml:/etc/prometheus/prometheus.yml
 
       grafana:
         image: grafana/grafana:latest
         ports:
           - 3001:3000
-        options: >-
-          --env=GF_SECURITY_ADMIN_USER=admin
-          --env=GF_SECURITY_ADMIN_PASSWORD=admin
-          --env=GF_USERS_ALLOW_SIGN_UP=false
+        env:
+          GF_SECURITY_ADMIN_USER: admin
+          GF_SECURITY_ADMIN_PASSWORD: admin
+          GF_USERS_ALLOW_SIGN_UP: false
 
     steps:
       - name: Checkout code
@@ -55,61 +56,56 @@ jobs:
       - name: Install prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y curl wget unzip openjdk-17-jre-headless docker-compose
+          sudo apt-get install -y curl wget unzip openjdk-17-jre-headless
           echo "✅ Prerequisites installed"
 
-      - name: Create Prometheus config
+      - name: Create Prometheus config (for cAdvisor)
         run: |
-          cat <<'EOF' > prometheus.yml
+          cat <<'EOF' > /tmp/prometheus.yml
           global:
             scrape_interval: 5s
-
           scrape_configs:
             - job_name: 'cadvisor'
               static_configs:
                 - targets: ['cadvisor:8081']
           EOF
-          echo "✅ Prometheus config created"
+          echo "✅ Prometheus config created in /tmp/prometheus.yml"
 
-      - name: Wait for monitoring stack
+      - name: Wait for Monitoring Stack
         run: |
-          echo "Waiting for Prometheus and Grafana to start..."
+          echo "⏳ Waiting for Prometheus (9091) and Grafana (3001)..."
           for i in {1..20}; do
-            if curl -s -f http://localhost:9091/-/ready > /dev/null; then
+            if curl -s -f http://localhost:9090/-/ready > /dev/null; then
               echo "✅ Prometheus is ready!"
               break
             fi
-            echo "Prometheus not ready yet... retrying ($i/20)"
             sleep 5
           done
-
+          
           for i in {1..20}; do
-            if curl -s -f http://localhost:3001/api/health > /dev/null; then
+            if curl -s -f http://localhost:3000/api/health > /dev/null; then
               echo "✅ Grafana is ready!"
               break
             fi
-            echo "Grafana not ready yet... retrying ($i/20)"
             sleep 5
           done
 
-      - name: Wait for HTTPBin and cAdvisor to start
+      - name: Wait for HTTPBin and cAdvisor
         run: |
-          echo "Waiting for HTTPBin service..."
-          for i in {1..15}; do
+          for i in {1..10}; do
             if curl -s -f http://localhost:91/get > /dev/null; then
-              echo "✅ HTTPBin is up!"
+              echo "✅ HTTPBin up!"
               break
             fi
-            sleep 5
+            sleep 3
           done
 
-          echo "Waiting for cAdvisor service..."
-          for i in {1..15}; do
+          for i in {1..10}; do
             if curl -s -f http://localhost:8081/metrics > /dev/null; then
-              echo "✅ cAdvisor is up!"
+              echo "✅ cAdvisor up!"
               break
             fi
-            sleep 5
+            sleep 3
           done
 
       - name: Install JMeter
@@ -119,23 +115,21 @@ jobs:
           sudo ln -sf /opt/apache-jmeter-5.6.3/bin/jmeter /usr/local/bin/jmeter
           jmeter -v
 
-      - name: Install JMeter Plugins (Ultimate Thread Group)
+      - name: Install JMeter Plugins
         run: |
           JMETER_HOME=/opt/apache-jmeter-5.6.3
           wget -q https://jmeter-plugins.org/get/ -O /tmp/JMeterPluginsManager.jar
           wget -q https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar -O /tmp/cmdrunner-2.3.jar
-
           mkdir -p $JMETER_HOME/lib/ext
           cp /tmp/JMeterPluginsManager.jar $JMETER_HOME/lib/ext/
           cp /tmp/cmdrunner-2.3.jar $JMETER_HOME/lib/
-
           java -cp $JMETER_HOME/lib/ext/JMeterPluginsManager.jar org.jmeterplugins.repository.PluginManagerCMDInstaller
           $JMETER_HOME/bin/PluginsManagerCMD.sh install jpgc-casutg
 
       - name: Run JMeter Test
         run: |
           mkdir -p /tmp/results
-          jmeter -n -t ./P01_HTTPBinAPI_StreeTest.jmx \
+          jmeter -n -t ./P01_HTTPBinAPI_PT_StreeTest.jmx \
                  -l /tmp/results/results.jtl \
                  -e -o /tmp/results/report
           echo "✅ JMeter test completed"
