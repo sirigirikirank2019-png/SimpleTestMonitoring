@@ -34,7 +34,7 @@ jobs:
       prometheus:
         image: prom/prometheus:latest
         ports:
-          - 9090:9090
+          - 9091:9090
         options: >-
           --volume=/tmp/prometheus:/etc/prometheus
 
