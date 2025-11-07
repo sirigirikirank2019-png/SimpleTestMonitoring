@@ -36,7 +36,7 @@ jobs:
         ports:
           - 9091:9090
         options: >-
-          --volume=/tmp/prometheus:/etc/prometheus:ro
+          --volume=${{ runner.temp }}/prometheus:/etc/prometheus:ro
 
       grafana:
         image: grafana/grafana:latest
@@ -59,8 +59,8 @@ jobs:
 
       - name: Prepare Prometheus config
         run: |
-          mkdir -p /tmp/prometheus
-          cat <<'EOF' > /tmp/prometheus/prometheus.yml
+          mkdir -p ${{ runner.temp }}/prometheus
+          cat <<'EOF' > ${{ runner.temp }}/prometheus/prometheus.yml
           global:
             scrape_interval: 5s
       
@@ -69,17 +69,7 @@ jobs:
               static_configs:
                 - targets: ['cadvisor:8080']
           EOF
-      
-          echo "🚀 Starting Prometheus container..."
-          docker run -d \
-            -p 9090:9090 \
-            -v $PWD/prometheus.yml:/etc/prometheus/prometheus.yml \
-            --name prometheus prom/prometheus:latest
-      
-          echo "✅ Prometheus started successfully"
-          sleep 5
-          curl -s http://localhost:9091/-/ready || echo "Prometheus not yet ready"
-
+          
       - name: Wait for Monitoring Stack
         run: |
           echo "⏳ Waiting for Prometheus (9091) and Grafana (3001)..."
