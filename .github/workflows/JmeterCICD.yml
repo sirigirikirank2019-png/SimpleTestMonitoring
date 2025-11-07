@@ -36,7 +36,7 @@ jobs:
         ports:
           - 9091:9090
         options: >-
-          --volume=/tmp/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+          --volume=/tmp/prometheus:/etc/prometheus:ro
 
       grafana:
         image: grafana/grafana:latest
@@ -57,16 +57,17 @@ jobs:
           sudo apt-get install -y curl wget unzip openjdk-17-jre-headless
           echo "✅ Prerequisites installed"
 
-      - name: Start Prometheus
+      - name: Prepare Prometheus config
         run: |
-          echo "🧩 Creating Prometheus config..."
-          cat <<'EOF' > prometheus.yml
+          mkdir -p /tmp/prometheus
+          cat <<'EOF' > /tmp/prometheus/prometheus.yml
           global:
             scrape_interval: 5s
+      
           scrape_configs:
             - job_name: 'cadvisor'
               static_configs:
-                - targets: ['localhost:8081']
+                - targets: ['cadvisor:8080']
           EOF
       
           echo "🚀 Starting Prometheus container..."
