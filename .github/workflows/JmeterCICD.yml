@@ -7,10 +7,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-defaults:
-  run:
-    shell: bash
-
 jobs:
   jmeter-test:
     runs-on: ubuntu-22.04
@@ -36,7 +32,7 @@ jobs:
         ports:
           - 9091:9090
         options: >-
-          --volume=${{ runner.temp }}/prometheus:/etc/prometheus:ro
+          --volume=${{ github.workspace }}/tmp/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
 
       grafana:
         image: grafana/grafana:latest
@@ -57,51 +53,37 @@ jobs:
           sudo apt-get install -y curl wget unzip openjdk-17-jre-headless
           echo "✅ Prerequisites installed"
 
-      - name: Prepare Prometheus config
+      - name: Wait for Services
         run: |
-          mkdir -p ${{ runner.temp }}/prometheus
-          cat <<'EOF' > ${{ runner.temp }}/prometheus/prometheus.yml
-          global:
-            scrape_interval: 5s
-      
-          scrape_configs:
-            - job_name: 'cadvisor'
-              static_configs:
-                - targets: ['cadvisor:8080']
-          EOF
-          
-      - name: Wait for Monitoring Stack
-        run: |
-          echo "⏳ Waiting for Prometheus (9091) and Grafana (3001)..."
-          for i in {1..20}; do
-            if curl -s -f http://localhost:9091/-/ready > /dev/null; then
-              echo "✅ Prometheus is ready!"
-              break
-            fi
-            sleep 5
-          done
-          
-          for i in {1..20}; do
-            if curl -s -f http://localhost:3001/api/health > /dev/null; then
-              echo "✅ Grafana is ready!"
-              break
-            fi
-            sleep 5
-          done
+          echo "⏳ Waiting for services to start..."
 
-      - name: Wait for HTTPBin and cAdvisor
-        run: |
-          for i in {1..10}; do
+          for i in {1..20}; do
             if curl -s -f http://localhost:91/get > /dev/null; then
-              echo "✅ HTTPBin up!"
+              echo "✅ HTTPBin is ready!"
               break
             fi
             sleep 3
           done
 
-          for i in {1..10}; do
+          for i in {1..20}; do
             if curl -s -f http://localhost:8081/metrics > /dev/null; then
-              echo "✅ cAdvisor up!"
+              echo "✅ cAdvisor is ready!"
+              break
+            fi
+            sleep 3
+          done
+
+          for i in {1..20}; do
+            if curl -s -f http://localhost:9091/-/ready > /dev/null; then
+              echo "✅ Prometheus is ready!"
+              break
+            fi
+            sleep 3
+          done
+
+          for i in {1..20}; do
+            if curl -s -f http://localhost:3001/api/health > /dev/null; then
+              echo "✅ Grafana is ready!"
               break
             fi
             sleep 3
@@ -113,17 +95,6 @@ jobs:
           unzip -q apache-jmeter-5.6.3.zip -d /opt/
           sudo ln -sf /opt/apache-jmeter-5.6.3/bin/jmeter /usr/local/bin/jmeter
           jmeter -v
-
-      - name: Install JMeter Plugins
-        run: |
-          JMETER_HOME=/opt/apache-jmeter-5.6.3
-          wget -q https://jmeter-plugins.org/get/ -O /tmp/JMeterPluginsManager.jar
-          wget -q https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar -O /tmp/cmdrunner-2.3.jar
-          mkdir -p $JMETER_HOME/lib/ext
-          cp /tmp/JMeterPluginsManager.jar $JMETER_HOME/lib/ext/
-          cp /tmp/cmdrunner-2.3.jar $JMETER_HOME/lib/
-          java -cp $JMETER_HOME/lib/ext/JMeterPluginsManager.jar org.jmeterplugins.repository.PluginManagerCMDInstaller
-          $JMETER_HOME/bin/PluginsManagerCMD.sh install jpgc-casutg
 
       - name: Run JMeter Test
         run: |
@@ -137,16 +108,15 @@ jobs:
         run: |
           mkdir -p /tmp/final_reports
           cp -r /tmp/results/report /tmp/final_reports/JMeter-Report || true
-          
+
           curl -s http://localhost:8081/metrics > /tmp/final_reports/cadvisor_metrics.txt || true
           curl -s http://localhost:9091/api/v1/targets > /tmp/final_reports/prometheus_targets.json || true
           curl -s http://localhost:3001/api/health > /tmp/final_reports/grafana_health.json || true
 
           echo "✅ Monitoring data collected"
 
-      - name: Upload All Reports
+      - name: Upload Reports
         uses: actions/upload-artifact@v4
         with:
           name: Performance-Reports
           path: /tmp/final_reports
-          
