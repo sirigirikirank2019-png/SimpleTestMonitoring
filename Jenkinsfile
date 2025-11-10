@@ -22,15 +22,13 @@ pipeline {
 
         stage('Run JMeter Test') {
             steps {
-                bat '"C:\\Users\\sreek\\Desktop\\apache-jmeter-5.6.3\\bin\\jmeter.bat" -n -t P01_HTTPBinAPI_StreeTest.jmx -l C:\\Users\\sreek\\Desktop\\Jmeter_Scripts\\Results\\results.jtl -e -o C:\\Users\\sreek\\Desktop\\Jmeter_Scripts\\Results\\report'
+                bat '"C:\\Users\\sreek\\Desktop\\apache-jmeter-5.6.3\\bin\\jmeter.bat" -n -t P01_HTTPBinAPI_StreeTest.jmx -l C:\\Users\\sreek\\Desktop\\Jmeter_Scripts\\Results\\10112025\\results.jtl -e -o C:\\Users\\sreek\\Desktop\\Jmeter_Scripts\\Results\\10112025\\report'
             }
         }
 
-        stage('Collect Reports') {
+        stage('Archive Reports') {
             steps {
-                bat 'mkdir final_reports 2>nul || echo Folder already exists'
-                bat 'robocopy C:\\Users\\sreek\\Desktop\\Jmeter_Scripts\\Results\\report final_reports\\JMeter-Report /E'
-                echo '✅ Reports collected'
+                archiveArtifacts artifacts: 'C:\\Users\\sreek\\Desktop\\Jmeter_Scripts\\Results\\10112025\\report\\**', fingerprint: true
             }
         }
 
