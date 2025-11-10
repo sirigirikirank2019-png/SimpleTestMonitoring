@@ -8,6 +8,11 @@ pipeline {
             }
         }
 
+         stage('List Workspace') {   // <-- new stage
+            steps {
+                bat 'dir /s'          // lists all files recursively
+            }
+        }
         stage('Setup JMeter') {
             steps {
                 // Adjust path if JMeter is already installed
