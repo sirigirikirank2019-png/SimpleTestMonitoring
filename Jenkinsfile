@@ -24,7 +24,7 @@ pipeline {
         stage('Collect Reports') {
             steps {
                 bat 'mkdir final_reports'
-                bat 'xcopy /E /I report final_reports\\JMeter-Report'
+                bat 'xcopy /E /I C:\\Users\\sreek\\Desktop\\Jmeter_Scripts\\Results\\report final_reports\\JMeter-Report'
                 echo '✅ Reports collected'
             }
         }
