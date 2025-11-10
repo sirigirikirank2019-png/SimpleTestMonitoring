@@ -1,66 +1,44 @@
 pipeline {
     agent any
 
-    environment {
-        REPORT_DIR = "/tmp/runtime_results"
-        FINAL_DIR = "/tmp/final_reports"
-    }
-
     stages {
+        stage('Checkout SCM') {
+            steps {
+                git url: 'https://github.com/sirigirikirank2019-png/SimpleTestMonitoring.git', branch: 'main'
+            }
+        }
+
+        stage('Setup JMeter') {
+            steps {
+                // Adjust path if JMeter is already installed
+                bat 'echo JMeter path: C:\\Users\\sreek\\Desktop\\apache-jmeter-5.6.3\\bin'
+            }
+        }
 
         stage('Run JMeter Test') {
             steps {
-                sh '''
-                echo "🚀 Starting JMeter Test Execution..."
-                mkdir -p $REPORT_DIR && chmod -R 777 $REPORT_DIR
-
-                # Remove old reports
-                rm -rf $REPORT_DIR/report
-
-                # Run JMeter
-                jmeter -n -t ./P01_HTTPBinAPI_StreeTest.jmx -l $REPORT_DIR/results.jtl -e -o $REPORT_DIR/report
-
-                echo "✅ JMeter test completed"
-                '''
+                bat '"C:\\Users\\sreek\\Desktop\\apache-jmeter-5.6.3\\bin\\jmeter.bat" -n -t P01_HTTPBinAPI_StreeTest.jmx -l C:\\Users\\sreek\\Desktop\\Jmeter_Scripts\\Results\\results.jtl -e -o C:\\Users\\sreek\\Desktop\\Jmeter_Scripts\\Results\\report'
             }
         }
 
         stage('Collect Reports') {
             steps {
-                sh '''
-                echo "📦 Collecting JMeter report and cAdvisor metrics..."
-                mkdir -p $FINAL_DIR && chmod -R 777 $FINAL_DIR
-
-                # Copy JMeter HTML report
-                if [ -d "$REPORT_DIR/report" ]; then
-                    cp -r $REPORT_DIR/report $FINAL_DIR/JMeter-Report
-                    echo "✅ JMeter HTML report copied."
-                else
-                    echo "⚠️ No JMeter report found."
-                fi
-
-                # Copy cAdvisor metrics
-                curl -s http://localhost:8080/metrics > $FINAL_DIR/cadvisor_metrics.txt || echo "⚠️ Skipped cAdvisor metrics."
-                '''
+                bat 'mkdir final_reports'
+                bat 'xcopy /E /I report final_reports\\JMeter-Report'
+                echo '✅ Reports collected'
             }
         }
 
-        stage('Publish HTML Report') {
+        stage('Archive Reports') {
             steps {
-                publishHTML(target: [
-                    allowMissing: true,
-                    keepAll: true,
-                    reportDir: "${FINAL_DIR}/JMeter-Report",
-                    reportFiles: 'index.html',
-                    reportName: 'JMeter HTML Report'
-                ])
+                archiveArtifacts artifacts: 'final_reports/**', fingerprint: true
             }
         }
     }
 
     post {
         always {
-            echo "🏁 Pipeline completed."
+            echo 'Pipeline completed.'
         }
     }
 }
