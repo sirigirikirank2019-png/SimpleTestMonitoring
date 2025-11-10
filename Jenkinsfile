@@ -31,12 +31,6 @@ pipeline {
                 archiveArtifacts artifacts: 'C:\\Users\\sreek\\Desktop\\Jmeter_Scripts\\Results\\10112025\\report\\**', fingerprint: true
             }
         }
-
-        stage('Archive Reports') {
-            steps {
-                archiveArtifacts artifacts: 'final_reports/**', fingerprint: true
-            }
-        }
     }
 
     post {
