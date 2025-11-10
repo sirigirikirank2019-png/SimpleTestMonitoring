@@ -23,7 +23,7 @@ pipeline {
 
         stage('Collect Reports') {
             steps {
-                bat 'mkdir final_reports'
+                bat 'mkdir final_reports 2>nul || echo Folder already exists'
                 bat 'robocopy C:\\Users\\sreek\\Desktop\\Jmeter_Scripts\\Results\\report final_reports\\JMeter-Report /E'
                 echo '✅ Reports collected'
             }
