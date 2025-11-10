@@ -18,7 +18,7 @@ pipeline {
                 rm -rf $REPORT_DIR/report
 
                 # Run JMeter
-                jmeter -n -t /P01_HTTPBinAPI_StreeTest.jmx -l $REPORT_DIR/results.jtl -e -o $REPORT_DIR/report
+                jmeter -n -t ./P01_HTTPBinAPI_StreeTest.jmx -l $REPORT_DIR/results.jtl -e -o $REPORT_DIR/report
 
                 echo "✅ JMeter test completed"
                 '''
