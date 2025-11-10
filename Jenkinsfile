@@ -10,13 +10,13 @@ pipeline {
 
         stage('Run JMeter Test') {
             steps {
-                bat '"C:\\Users\\sreek\\Desktop\\apache-jmeter-5.6.3\\bin\\jmeter.bat" -n -t P01_HTTPBinAPI_StreeTest.jmx -l Results\\results.jtl -e -o Results\\report'
+                bat '"C:\\Users\\sreek\\Desktop\\apache-jmeter-5.6.3\\bin\\jmeter.bat" -n -t P01_HTTPBinAPI_StreeTest.jmx -l C:\\Users\\sreek\Desktop\\Jmeter_Scripts\\Results\\10112025\\results.jtl -e -o C:\\Users\\sreek\Desktop\\Jmeter_Scripts\\Results\\10112025\\report'
             }
         }
 
         stage('Archive Reports') {
             steps {
-                archiveArtifacts artifacts: 'Results\\report\\**', fingerprint: true
+                archiveArtifacts artifacts: 'C:\\Users\\sreek\Desktop\\Jmeter_Scripts\\Results\\10112025\\report\\**', fingerprint: true
                 echo '✅ JMeter report archived'
             }
         }
